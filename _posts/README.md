@@ -1,3 +1,18 @@
+---
+title:  "[2022810089] 이원표 7차과제-4"
+excerpt: "md 파일에 마크다운 문법으로 작성하여 Github 원격 저장소에 업로드 해보자. 에디터는 Visual Studio code 사용! 로컬 서버에서 확인도 해보자. "
+
+categories:
+  - Blog
+tags:
+  - [Blog, jekyll, Github, Git]
+
+toc: true
+toc_sticky: true
+ 
+date: 2020-05-25
+last_modified_at: 2020-05-25
+---
 # 요리 추천 웹 앱 구축
 
 이 단원에서는 이전 단원에서 배운 몇 가지 기술과 이 시리즈 전체에서 사용된 맛있는 요리 데이터 세트를 사용하여 분류 모델을 구축합니다. 또한 Onnx의 웹 런타임을 활용하여 저장된 모델을 사용하는 작은 웹 앱을 빌드합니다.
