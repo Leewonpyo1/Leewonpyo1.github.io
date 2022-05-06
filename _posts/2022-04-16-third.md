@@ -1,4 +1,0 @@
----
-layout: single
-title:  "Welcome to Jekyll!"
----
