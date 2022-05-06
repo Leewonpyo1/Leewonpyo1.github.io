@@ -1,0 +1,244 @@
+# 요리 분류기 2
+
+이 두 번째 분류 수업에서는 숫자 데이터를 분류하는 더 많은 방법을 탐색합니다. 또한 하나의 분류기를 다른 분류기보다 선택하는 결과에 대해서도 배우게 됩니다.
+
+## [Pre-lecture quiz](https://white-water-09ec41f0f.azurestaticapps.net/quiz/23/)
+
+### 전제 조건
+
+이전 강의를 완료했고 이 4개 강의 폴더의 루트에 있는 _cleaned_cuisines.csv_라는 `data` 폴더에 정리된 데이터세트가 있다고 가정합니다.
+
+### 준비
+
+정리된 데이터 세트가 있는 _notebook.ipynb_ 파일을 로드하고 X 및 y 데이터 프레임으로 분할하여 모델 구축 프로세스를 준비했습니다.
+
+## 분류 지도
+
+이전에는 Microsoft의 치트 시트를 사용하여 데이터를 분류할 때 사용할 수 있는 다양한 옵션에 대해 배웠습니다. Scikit-learn은 추정기를 좁히는 데 도움이 될 수 있는 유사하지만 더 세분화된 치트 시트를 제공합니다(분류기의 또 다른 용어).
+
+![ML Map from Scikit-learn](images/map.png)
+> Tip: [visit this map online](https://scikit-learn.org/stable/tutorial/machine_learning_map/) and click along the path to read documentation.
+
+### 계획
+
+이 지도는 데이터를 명확하게 파악하고 나면 결정에 이르는 경로를 따라 '걸을' 수 있으므로 매우 유용합니다.
+
+- 샘플이 50개 이상 있습니다.
+- 카테고리를 예측하고 싶습니다.
+- 데이터에 레이블을 지정했습니다.
+- 샘플이 100,000개 미만입니다.
+- ✨ 우리는 선형 SVC를 선택할 수 있습니다
+- 그것이 작동하지 않는다면, 우리는 숫자 데이터를 가지고 있기 때문에
+    - 우리는 ✨ KNeighbors Classifier를 시도할 수 있습니다
+      - 그래도 작동하지 않으면 ✨ SVC 및 ✨ Ensemble Classifiers를 시도하십시오.
+
+이것은 따라가기에 매우 도움이 되는 길입니다.
+
+## 데이터를 분할
+
+
+이 경로를 따라 사용할 라이브러리를 가져와야 합니다.
+
+1. 필요한 라이브러리를 가져옵니다.
+
+    ```python
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.svm import SVC
+    from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+    from sklearn.model_selection import train_test_split, cross_val_score
+    from sklearn.metrics import accuracy_score,precision_score,confusion_matrix,classification_report, precision_recall_curve
+    import numpy as np
+    ```
+
+
+2. 훈련 데이터와 테스트 데이터를 분할합니다.
+
+    ```python
+    X_train, X_test, y_train, y_test = train_test_split(cuisines_feature_df, cuisines_label_df, test_size=0.3)
+    ```
+
+## 선형 SVC 분류기
+
+지원 벡터 클러스터링(SVC)은 ML 기술의 지원 벡터 머신 제품군의 하위 항목입니다(아래에서 자세히 알아보기). 이 방법에서는 '커널'을 선택하여 레이블을 클러스터링하는 방법을 결정할 수 있습니다. 'C' 매개변수는 매개변수의 영향을 규제하는 '정규화'를 나타냅니다. 커널은 [several](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC); 여기서는 선형 SVC를 활용하도록 '선형'으로 설정합니다. 확률은 기본적으로 '거짓'입니다. 여기에서 확률 추정치를 수집하기 위해 'true'로 설정합니다. 확률을 얻기 위해 데이터를 섞기 위해 임의 상태를 '0'으로 설정합니다.
+
+### 선형 SVC 적용
+
+분류기 배열을 생성하여 시작합니다. 테스트하면서 이 배열에 점진적으로 추가할 것입니다.
+
+1. 선형 SVC로 시작:
+
+    ```python
+    C = 10
+    # Create different classifiers.
+    classifiers = {
+        'Linear SVC': SVC(kernel='linear', C=C, probability=True,random_state=0)
+    }
+    ```
+
+
+2. 선형 SVC를 사용하여 모델을 훈련하고 보고서를 인쇄합니다.
+
+    ```python
+    n_classifiers = len(classifiers)
+    
+    for index, (name, classifier) in enumerate(classifiers.items()):
+        classifier.fit(X_train, np.ravel(y_train))
+    
+        y_pred = classifier.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        print("Accuracy (train) for %s: %0.1f%% " % (name, accuracy * 100))
+        print(classification_report(y_test,y_pred))
+    ```
+
+    
+결과는 꽤 좋습니다.
+
+    ```output
+    Accuracy (train) for Linear SVC: 78.6% 
+                  precision    recall  f1-score   support
+    
+         chinese       0.71      0.67      0.69       242
+          indian       0.88      0.86      0.87       234
+        japanese       0.79      0.74      0.76       254
+          korean       0.85      0.81      0.83       242
+            thai       0.71      0.86      0.78       227
+    
+        accuracy                           0.79      1199
+       macro avg       0.79      0.79      0.79      1199
+    weighted avg       0.79      0.79      0.79      1199
+    ```
+
+## K-Neighbors 분류기
+
+K-Neighbors는 지도 학습 및 비지도 학습 모두에 사용할 수 있는 ML 방법의 "이웃" 계열의 일부입니다. 이 방법에서는 미리 정의된 수의 포인트가 생성되고 데이터에 대해 일반화된 레이블을 예측할 수 있도록 이러한 포인트 주변에 데이터가 수집됩니다.
+
+### K-Neighbors 분류기 적용
+
+이전 분류기는 훌륭했고 데이터와 잘 작동했지만 더 나은 정확도를 얻을 수 있습니다. K-Neighbors 분류기를 사용해 보십시오.
+
+
+1. 분류자 배열에 줄을 추가합니다(선형 SVC 항목 뒤에 쉼표 추가)
+
+    ```python
+    'KNN classifier': KNeighborsClassifier(C),
+    ```
+
+    The result is a little worse:
+
+    ```output
+    Accuracy (train) for KNN classifier: 73.8% 
+                  precision    recall  f1-score   support
+    
+         chinese       0.64      0.67      0.66       242
+          indian       0.86      0.78      0.82       234
+        japanese       0.66      0.83      0.74       254
+          korean       0.94      0.58      0.72       242
+            thai       0.71      0.82      0.76       227
+    
+        accuracy                           0.74      1199
+       macro avg       0.76      0.74      0.74      1199
+    weighted avg       0.76      0.74      0.74      1199
+    ```
+
+    ✅ Learn about [K-Neighbors](https://scikit-learn.org/stable/modules/neighbors.html#neighbors)
+
+## 지원 벡터 분류기
+
+지원 벡터 분류기는 다음의 일부입니다.[Support-Vector Machine](https://wikipedia.org/wiki/Support-vector_machine) 분류 및 회귀 작업에 사용되는 ML 방법 제품군입니다. SVM은 두 범주 간의 거리를 최대화하기 위해 "공간의 지점에 훈련 예제를 매핑"합니다. 후속 데이터는 해당 범주를 예측할 수 있도록 이 공간에 매핑됩니다.
+
+### 지원 벡터 분류기 적용
+
+
+Support Vector Classifier를 사용하여 정확도를 조금 더 높여 보겠습니다.
+
+
+1. K-Neighbors 항목 뒤에 쉼표를 추가하고 다음 줄을 추가합니다.
+
+    ```python
+    'SVC': SVC(),
+    ```
+
+   결과는 꽤 좋습니다!
+
+    ```output
+    Accuracy (train) for SVC: 83.2% 
+                  precision    recall  f1-score   support
+    
+         chinese       0.79      0.74      0.76       242
+          indian       0.88      0.90      0.89       234
+        japanese       0.87      0.81      0.84       254
+          korean       0.91      0.82      0.86       242
+            thai       0.74      0.90      0.81       227
+    
+        accuracy                           0.83      1199
+       macro avg       0.84      0.83      0.83      1199
+    weighted avg       0.84      0.83      0.83      1199
+    ```
+
+    ✅ Learn about [Support-Vectors](https://scikit-learn.org/stable/modules/svm.html#svm)
+
+## 앙상블 분류기
+
+
+이전 테스트는 꽤 괜찮았지만 끝까지 가는 길을 따라가보자. Ensemble Classifiers, 특히 Random Forest 및 AdaBoost를 사용해 보겠습니다.
+
+```python
+  'RFST': RandomForestClassifier(n_estimators=100),
+  'ADA': AdaBoostClassifier(n_estimators=100)
+```
+
+결과는 특히 Random Forest의 경우 매우 좋습니다.
+
+```output
+Accuracy (train) for RFST: 84.5% 
+              precision    recall  f1-score   support
+
+     chinese       0.80      0.77      0.78       242
+      indian       0.89      0.92      0.90       234
+    japanese       0.86      0.84      0.85       254
+      korean       0.88      0.83      0.85       242
+        thai       0.80      0.87      0.83       227
+
+    accuracy                           0.84      1199
+   macro avg       0.85      0.85      0.84      1199
+weighted avg       0.85      0.84      0.84      1199
+
+Accuracy (train) for ADA: 72.4% 
+              precision    recall  f1-score   support
+
+     chinese       0.64      0.49      0.56       242
+      indian       0.91      0.83      0.87       234
+    japanese       0.68      0.69      0.69       254
+      korean       0.73      0.79      0.76       242
+        thai       0.67      0.83      0.74       227
+
+    accuracy                           0.72      1199
+   macro avg       0.73      0.73      0.72      1199
+weighted avg       0.73      0.72      0.72      1199
+```
+
+✅ Learn about [Ensemble Classifiers](https://scikit-learn.org/stable/modules/ensemble.html)
+
+머신 러닝의 이 방법은 "여러 기본 추정기의 예측을 결합"하여 모델의 품질을 향상시킵니다. 이 예에서는 Random Trees와 AdaBoost를 사용했습니다.
+
+- [Random Forest](https://scikit-learn.org/stable/modules/ensemble.html#forest), 평균화 방법은 과적합을 피하기 위해 임의성이 주입된 '의사결정 트리'의 '숲'을 구축합니다. n_estimators 매개변수는 트리 수로 설정됩니다.
+
+- [AdaBoost](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.AdaBoostClassifier.html) 
+분류기를 데이터세트에 맞춘 다음 해당 분류기의 복사본을 동일한 데이터세트에 맞춥니다. 잘못 분류된 항목의 가중치에 초점을 맞추고 다음 분류기가 수정하도록 맞춤을 조정합니다.
+
+---
+
+## 🚀Challenge
+
+이러한 각 기술에는 조정할 수 있는 많은 매개변수가 있습니다. 각각의 기본 매개변수를 조사하고 이러한 매개변수를 조정하면 모델 품질에 어떤 의미가 있는지 생각해 보세요.
+
+## [Post-lecture quiz](https://white-water-09ec41f0f.azurestaticapps.net/quiz/24/)
+
+## Review & Self Study
+
+There's a lot of jargon in these lessons, so take a minute to review [this list](https://docs.microsoft.com/dotnet/machine-learning/resources/glossary?WT.mc_id=academic-15963-cxa) of useful terminology!
+
+## Assignment 
+
+[Parameter play](assignment.md)
