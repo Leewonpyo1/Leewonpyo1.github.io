@@ -1,3 +1,18 @@
+---
+title:  "[2022810089_이원표_[7차과제]"
+
+
+categories:
+  - Blog
+tags:
+  - [Blog, jekyll, Github, Git]
+
+toc: true
+toc_sticky: true
+ 
+date: 2020-05-25
+last_modified_at: 2020-05-25
+---
 # 분류 시작하기
 
 ## 지역 주제: 맛있는 아시아 및 인도 요리🍜
