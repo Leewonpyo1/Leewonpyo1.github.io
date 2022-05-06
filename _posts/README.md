@@ -1,0 +1,256 @@
+# 요리 분류기 1
+
+이 단원에서는 요리에 대한 균형 잡힌 깨끗한 데이터로 가득 찬 지난 단원에서 저장한 데이터 세트를 사용합니다.
+
+
+다양한 분류기와 함께 이 데이터 세트를 사용하여 _재료 그룹을 기반으로 주어진 국가 요리를 예측_합니다. 그렇게 하는 동안 분류 작업에 알고리즘을 활용할 수 있는 몇 가지 방법에 대해 자세히 알아볼 것입니다.
+
+## [Pre-lecture quiz](https://white-water-09ec41f0f.azurestaticapps.net/quiz/21/)
+# 준비
+
+완료했다고 가정하면[Lesson 1](../1-Introduction/README.md),이 4개의 레슨을 위해 루트 `/data` 폴더에 _cleaned_cuisines.csv_ 파일이 있는지 확인하십시오.
+
+## 국가 요리를 예측하다
+
+
+1. 이 강의의 _notebook.ipynb_ 폴더에서 Pandas 라이브러리와 함께 해당 파일을 가져옵니다.
+
+    ```python
+    import pandas as pd
+    cuisines_df = pd.read_csv("../data/cleaned_cuisines.csv")
+    cuisines_df.head()
+    ```
+
+    
+데이터는 다음과 같습니다.
+
+|     | Unnamed: 0 | cuisine | almond | angelica | anise | anise_seed | apple | apple_brandy | apricot | armagnac | ... | whiskey | white_bread | white_wine | whole_grain_wheat_flour | wine | wood | yam | yeast | yogurt | zucchini |
+| --- | ---------- | ------- | ------ | -------- | ----- | ---------- | ----- | ------------ | ------- | -------- | --- | ------- | ----------- | ---------- | ----------------------- | ---- | ---- | --- | ----- | ------ | -------- |
+| 0   | 0          | indian  | 0      | 0        | 0     | 0          | 0     | 0            | 0       | 0        | ... | 0       | 0           | 0          | 0                       | 0    | 0    | 0   | 0     | 0      | 0        |
+| 1   | 1          | indian  | 1      | 0        | 0     | 0          | 0     | 0            | 0       | 0        | ... | 0       | 0           | 0          | 0                       | 0    | 0    | 0   | 0     | 0      | 0        |
+| 2   | 2          | indian  | 0      | 0        | 0     | 0          | 0     | 0            | 0       | 0        | ... | 0       | 0           | 0          | 0                       | 0    | 0    | 0   | 0     | 0      | 0        |
+| 3   | 3          | indian  | 0      | 0        | 0     | 0          | 0     | 0            | 0       | 0        | ... | 0       | 0           | 0          | 0                       | 0    | 0    | 0   | 0     | 0      | 0        |
+| 4   | 4          | indian  | 0      | 0        | 0     | 0          | 0     | 0            | 0       | 0        | ... | 0       | 0           | 0          | 0                       | 0    | 0    | 0   | 0     | 1      | 0        |
+  
+
+
+2. 이제 여러 라이브러리를 추가로 가져옵니다.
+
+    ```python
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import train_test_split, cross_val_score
+    from sklearn.metrics import accuracy_score,precision_score,confusion_matrix,classification_report, precision_recall_curve
+    from sklearn.svm import SVC
+    import numpy as np
+    ```
+
+3. 훈련을 위해 X 및 y 좌표를 두 개의 데이터 프레임으로 나눕니다. `cuisine`은 레이블 데이터 프레임일 수 있습니다.
+
+    ```python
+    cuisines_label_df = cuisines_df['cuisine']
+    cuisines_label_df.head()
+    ```
+
+
+다음과 같이 표시됩니다.
+
+    ```output
+    0    indian
+    1    indian
+    2    indian
+    3    indian
+    4    indian
+    Name: cuisine, dtype: object
+    ```
+
+4.해당 `Unnamed: 0` 열과 `cuisine` 열을 삭제하고 `drop()`을 호출합니다. 나머지 데이터를 학습 가능한 기능으로 저장합니다.
+
+    ```python
+    cuisines_feature_df = cuisines_df.drop(['Unnamed: 0', 'cuisine'], axis=1)
+    cuisines_feature_df.head()
+    ```
+
+   기능은 다음과 같습니다.
+
+|      | almond | angelica | anise | anise_seed | apple | apple_brandy | apricot | armagnac | artemisia | artichoke |  ... | whiskey | white_bread | white_wine | whole_grain_wheat_flour | wine | wood |  yam | yeast | yogurt | zucchini |
+| ---: | -----: | -------: | ----: | ---------: | ----: | -----------: | ------: | -------: | --------: | --------: | ---: | ------: | ----------: | ---------: | ----------------------: | ---: | ---: | ---: | ----: | -----: | -------: |
+|    0 |      0 |        0 |     0 |          0 |     0 |            0 |       0 |        0 |         0 |         0 |  ... |       0 |           0 |          0 |                       0 |    0 |    0 |    0 |     0 |      0 |        0 | 0 |
+|    1 |      1 |        0 |     0 |          0 |     0 |            0 |       0 |        0 |         0 |         0 |  ... |       0 |           0 |          0 |                       0 |    0 |    0 |    0 |     0 |      0 |        0 | 0 |
+|    2 |      0 |        0 |     0 |          0 |     0 |            0 |       0 |        0 |         0 |         0 |  ... |       0 |           0 |          0 |                       0 |    0 |    0 |    0 |     0 |      0 |        0 | 0 |
+|    3 |      0 |        0 |     0 |          0 |     0 |            0 |       0 |        0 |         0 |         0 |  ... |       0 |           0 |          0 |                       0 |    0 |    0 |    0 |     0 |      0 |        0 | 0 |
+|    4 |      0 |        0 |     0 |          0 |     0 |            0 |       0 |        0 |         0 |         0 |  ... |       0 |           0 |          0 |                       0 |    0 |    0 |    0 |     0 |      1 |        0 | 0 |
+
+
+이제 모델을 훈련할 준비가 되었습니다!
+
+## 분류기 선택
+
+
+이제 데이터가 정리되고 학습할 준비가 되었으므로 작업에 사용할 알고리즘을 결정해야 합니다
+
+
+Scikit-learn은 지도 학습(Supervised Learning)에서 분류를 그룹화하고 해당 범주에서 분류하는 다양한 방법을 찾을 수 있습니다. [The variety](https://scikit-learn.org/stable/supervised_learning.html) 첫눈에 상당히 어리둥절하다. 다음 방법에는 모두 분류 기술이 포함됩니다
+
+- 선형 모델
+- 서포트 벡터 머신
+- 확률적 경사하강법
+- 가장 가까운 이웃
+- 가우스 프로세스
+- 의사결정나무
+- 앙상블 방식(투표 분류기)
+- 다중 클래스 및 다중 출력 알고리즘(다중 클래스 및 다중 레이블 분류, 다중 클래스 다중 출력 분류)
+
+> 당신은 또한 사용할 수 있습니다 [neural networks to classify data](https://scikit-learn.org/stable/modules/neural_networks_supervised.html#classification), 
+그러나 그것은 이 수업의 범위를 벗어납니다.
+
+### 어떤 분류기를 사용할 것인가?
+
+
+그렇다면 어떤 분류기를 선택해야 할까요? 종종 여러 가지를 실행하고 좋은 결과를 찾는 것이 테스트하는 방법입니다.Scikit-learn은 다음을 제공합니다.[side-by-side comparison](https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html) 생성된 데이터세트에서KNeighbors, SVC 두 가지 방법, GaussianProcessClassifier, DecisionTreeClassifier, RandomForestClassifier, MLPClassifier, AdaBoostClassifier, GaussianNB 및 QuadraticDiscrinationAnalysis를 비교하여 시각화된 결과를 보여줍니다.
+
+
+![comparison of classifiers](images/comparison.png)
+> Scikit-learn의 문서에서 생성된 플롯
+
+> AutoML은 클라우드에서 이러한 비교를 실행하여 이 문제를 깔끔하게 해결하므로 데이터에 가장 적합한 알고리즘을 선택할 수 있습니다. Try it [here](https://docs.microsoft.com/learn/modules/automate-model-selection-with-azure-automl/?WT.mc_id=academic-15963-cxa)
+
+### 더 나은 접근 방식
+
+그러나 성급하게 추측하는 것보다 더 좋은 방법은 이 다운로드 가능한 아이디어를 따르는 것입니다.[ML Cheat sheet](https://docs.microsoft.com/azure/machine-learning/algorithm-cheat-sheet?WT.mc_id=academic-15963-cxa).여기서 우리는 다중 클래스 문제에 대해 몇 가지 선택 사항이 있음을 발견합니다.
+
+![cheatsheet for multiclass problems](images/cheatsheet.png)
+> A section of Microsoft's Algorithm Cheat Sheet, detailing multiclass classification options
+
+✅ 이 치트 시트를 다운로드하여 인쇄하여 벽에 걸어두십시오!
+
+### 추리
+
+우리가 가지고 있는 제약 조건을 감안할 때 다른 접근 방식을 통해 추론할 수 있는지 봅시다.
+
+- **신경망이 너무 무겁습니다**. 깨끗하지만 최소한의 데이터 세트와 노트북을 통해 로컬로 훈련을 실행하고 있다는 사실을 감안할 때 신경망은 이 작업에 너무 무겁습니다.
+- **2등급 분류기 없음**. 우리는 일대일(one-vs-all)을 배제하기 위해 2-클래스 분류기를 사용하지 않습니다.
+- **의사결정 트리 또는 로지스틱 회귀가 작동할 수 있음**. 의사 결정 트리가 작동하거나 다중 클래스 데이터에 대한 로지스틱 회귀가 작동할 수 있습니다.
+- **Multiclass Boosted Decision Trees는 다른 문제를 해결합니다**. 다중 클래스 부스트 의사 결정 트리는 비모수적 작업에 가장 적합합니다. 순위를 만들기 위해 설계된 작업이므로 우리에게 유용하지 않습니다.
+
+### 사이킷런 사용하기
+
+우리는 Scikit-learn을 사용하여 데이터를 분석할 것입니다. 그러나 Scikit-learn에서 로지스틱 회귀를 사용하는 방법은 여러 가지가 있습니다. Take a look at the [parameters to pass](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html?highlight=logistic%20regressio#sklearn.linear_model.LogisticRegression).  
+
+본질적으로 우리가 Scikit-learn에 로지스틱 회귀를 수행하도록 요청할 때 지정해야 하는 두 가지 중요한 매개변수인 `multi_class`와 `solver`가 있습니다. 'multi_class' 값은 특정 동작을 적용합니다. 솔버의 값은 사용할 알고리즘입니다. 모든 솔버가 모든 `multi_class` 값과 짝을 이룰 수 있는 것은 아닙니다.
+
+문서에 따르면 다중 클래스의 경우 학습 알고리즘은 다음과 같습니다.
+
+
+- **'multi_class' 옵션이 'ovr'로 설정된 경우 **one-vs-rest(OvR) 방식 사용**
+- `multi_class` 옵션이 `multinomial`로 설정된 경우 **교차 엔트로피 손실을 사용합니다**. (현재 '다항식' 옵션은 'lbfgs', 'sag', 'saga' 및 'newton-cg' 솔버에서만 지원됩니다.)"
+
+> 🎓여기서 'scheme'은 'ovr'(one-vs-rest) 또는 'multinomial'일 수 있습니다. 로지스틱 회귀는 실제로 이진 분류를 지원하도록 설계되었기 때문에 이러한 체계를 사용하면 다중 클래스 분류 작업을 더 잘 처리할 수 있습니다. [source](https://machinelearningmastery.com/one-vs-rest-and-one-vs-one-for-multi-class-classification/)
+
+> 🎓 '해결사'는 "최적화 문제에 사용할 알고리즘"으로 정의됩니다. [source](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html?highlight=logistic%20regressio#sklearn.linear_model.LogisticRegression).
+
+Scikit-learn은 솔버가 다양한 종류의 데이터 구조가 제시하는 다양한 문제를 처리하는 방법을 설명하기 위해 다음 표를 제공합니다.
+
+![solvers](images/solvers.png)
+
+## 데이터를 분할
+
+이전 수업에서 최근에 후자에 대해 배웠기 때문에 첫 번째 훈련 시도에 대한 로지스틱 회귀에 집중할 수 있습니다.
+`train_test_split()`을 호출하여 데이터를 학습 및 테스트 그룹으로 분할합니다.
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(cuisines_feature_df, cuisines_label_df, test_size=0.3)
+```
+
+## 로지스틱 회귀 적용
+
+
+다중 클래스 사례를 사용하고 있으므로 사용할 _scheme_과 설정할 _solver_를 선택해야 합니다. 다중 클래스 설정 및 **liblinear** 솔버와 함께 LogisticRegression을 사용하여 훈련합니다.
+
+1. multi_class를 'ovr'로 설정하고 솔버를 'liblinear'로 설정하여 로지스틱 회귀를 생성합니다.
+
+    ```python
+    lr = LogisticRegression(multi_class='ovr',solver='liblinear')
+    model = lr.fit(X_train, np.ravel(y_train))
+    
+    accuracy = model.score(X_test, y_test)
+    print ("Accuracy is {}".format(accuracy))
+    ```
+
+    ✅ 종종 기본값으로 설정되는 `lbfgs`와 같은 다른 솔버를 사용해 보십시오.
+
+    > Note, use Pandas [`ravel`](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.ravel.html) function to flatten your data when needed.
+
+    정확도는 **80%** 이상으로 좋습니다!
+
+2. 한 행의 데이터(#50)를 테스트하여 이 모델이 작동하는 것을 볼 수 있습니다.
+
+    ```python
+    print(f'ingredients: {X_test.iloc[50][X_test.iloc[50]!=0].keys()}')
+    print(f'cuisine: {y_test.iloc[50]}')
+    ```
+
+    결과가 인쇄됩니다.
+
+   ```output
+   ingredients: Index(['cilantro', 'onion', 'pea', 'potato', 'tomato', 'vegetable_oil'], dtype='object')
+   cuisine: indian
+   ```
+
+   ✅ 다른 행 번호를 시도하고 결과를 확인하십시오
+
+
+3. 더 깊이 파고 들면 이 예측의 정확성을 확인할 수 있습니다.
+
+    ```python
+    test= X_test.iloc[50].values.reshape(-1, 1).T
+    proba = model.predict_proba(test)
+    classes = model.classes_
+    resultdf = pd.DataFrame(data=proba, columns=classes)
+    
+    topPrediction = resultdf.T.sort_values(by=[0], ascending = [False])
+    topPrediction.head()
+    ```
+
+    
+결과가 인쇄됩니다. 인도 요리가 가장 가능성이 높은 추측입니다.
+
+    |          |        0 |
+    | -------: | -------: |
+    |   indian | 0.715851 |
+    |  chinese | 0.229475 |
+    | japanese | 0.029763 |
+    |   korean | 0.017277 |
+    |     thai | 0.007634 |
+
+    ✅ 모델이 이것이 인도 요리라고 확신하는 이유를 설명할 수 있습니까?
+
+4. 회귀 수업에서 했던 것처럼 분류 보고서를 인쇄하여 더 자세한 정보를 얻으십시오.
+
+    ```python
+    y_pred = model.predict(X_test)
+    print(classification_report(y_test,y_pred))
+    ```
+
+    |              | precision | recall | f1-score | support |
+    | ------------ | --------- | ------ | -------- | ------- |
+    | chinese      | 0.73      | 0.71   | 0.72     | 229     |
+    | indian       | 0.91      | 0.93   | 0.92     | 254     |
+    | japanese     | 0.70      | 0.75   | 0.72     | 220     |
+    | korean       | 0.86      | 0.76   | 0.81     | 242     |
+    | thai         | 0.79      | 0.85   | 0.82     | 254     |
+    | accuracy     | 0.80      | 1199   |          |         |
+    | macro avg    | 0.80      | 0.80   | 0.80     | 1199    |
+    | weighted avg | 0.80      | 0.80   | 0.80     | 1199    |
+
+## 🚀Challenge
+
+이 학습에서는 정리된 데이터를 사용하여 일련의 재료를 기반으로 국가 요리를 예측할 수 있는 기계 학습 모델을 구축했습니다. 시간을 내어 Scikit-learn이 데이터를 분류하기 위해 제공하는 다양한 옵션을 살펴보십시오. 무대 뒤에서 무슨 일이 일어나는지 이해하려면 '해결사'의 개념을 더 깊이 파헤쳐 보세요.
+
+## [Post-lecture quiz](https://white-water-09ec41f0f.azurestaticapps.net/quiz/22/)
+
+## Review & Self Study
+
+Dig a little more into the math behind logistic regression in [this lesson](https://people.eecs.berkeley.edu/~russell/classes/cs194/f11/lectures/CS194%20Fall%202011%20Lecture%2006.pdf)
+## Assignment 
+
+[Study the solvers](assignment.md)
